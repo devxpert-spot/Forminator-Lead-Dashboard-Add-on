@@ -111,7 +111,12 @@ class Forminator_Lead_Dashboard {
         }
 
         // Redirect Sales Admin users to Lead Dashboard after login
-        add_filter('login_redirect', array($this, 'sales_admin_login_redirect'), 10, 3);
+        // login_redirect covers wp-login.php
+        add_filter('login_redirect', array($this, 'sales_admin_login_redirect'), 999, 3);
+        // wp_login covers generic custom login forms
+        add_action('wp_login', array($this, 'sales_admin_wp_login_redirect'), 999, 2);
+        // woocommerce_login_redirect covers WooCommerce My Account login
+        add_filter('woocommerce_login_redirect', array($this, 'sales_admin_woo_login_redirect'), 999, 2);
 
         // Clean up WP admin bar for Sales Admins
         add_action('admin_bar_menu', array($this, 'restrict_sales_admin_toolbar'), 999);
@@ -323,6 +328,28 @@ class Forminator_Lead_Dashboard {
             return admin_url('admin.php?page=lead-dashboard');
         }
         return $redirect_to;
+    }
+
+    /**
+     * Redirect Sales Admins after login via any non-wp-login.php form.
+     * wp_login fires on every successful authentication.
+     */
+    public function sales_admin_wp_login_redirect($user_login, $user) {
+        if ($user instanceof WP_User && in_array(FLD_Roles::ROLE_SLUG, (array) $user->roles, true)) {
+            wp_safe_redirect(admin_url('admin.php?page=lead-dashboard'));
+            exit;
+        }
+    }
+
+    /**
+     * Override WooCommerce's own login redirect for Sales Admin users.
+     * woocommerce_login_redirect filter is WooCommerce's final redirect decision.
+     */
+    public function sales_admin_woo_login_redirect($redirect, $user) {
+        if ($user instanceof WP_User && in_array(FLD_Roles::ROLE_SLUG, (array) $user->roles, true)) {
+            return admin_url('admin.php?page=lead-dashboard');
+        }
+        return $redirect;
     }
 
     /**
