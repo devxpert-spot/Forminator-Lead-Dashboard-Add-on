@@ -639,23 +639,23 @@
         currentLeadId = entryId;
         showLoading(true);
 
-        // Get lead details
+        // Get lead details by exact entry ID
         $.ajax({
             url: fld_ajax.ajax_url,
             type: 'POST',
             data: {
-                action: 'fld_get_leads',
+                action: 'fld_get_lead',
                 nonce: fld_ajax.nonce,
-                search: entryId,
-                per_page: 1
+                entry_id: entryId
             },
             success: function(response) {
                 showLoading(false);
-                if (response.success && response.data.leads.length > 0) {
-                    const lead = response.data.leads[0];
-                    renderLeadModal(lead);
+                if (response.success) {
+                    renderLeadModal(response.data);
                     loadFeedback(entryId);
                     $('#fld-lead-modal').show();
+                } else {
+                    showNotice('error', fld_ajax.strings.error);
                 }
             },
             error: function() {

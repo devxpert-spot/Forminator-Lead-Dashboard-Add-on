@@ -129,6 +129,7 @@ class Forminator_Lead_Dashboard {
         add_action('wp_ajax_fld_delete_feedback', array($this, 'ajax_delete_feedback'));
         add_action('wp_ajax_fld_get_dashboard_stats', array($this, 'ajax_get_dashboard_stats'));
         add_action('wp_ajax_fld_export_leads', array($this, 'ajax_export_leads'));
+        add_action('wp_ajax_fld_get_lead', array($this, 'ajax_get_lead'));
 
         // Role management AJAX — admin only
         add_action('wp_ajax_fld_get_assignable_users', array($this, 'ajax_get_assignable_users'));
@@ -432,6 +433,31 @@ class Forminator_Lead_Dashboard {
         ));
 
         wp_send_json_success($leads);
+    }
+
+    /**
+     * AJAX: Get Single Lead by Entry ID
+     */
+    public function ajax_get_lead() {
+        check_ajax_referer('fld_nonce', 'nonce');
+
+        if (!FLD_Roles::can_access()) {
+            wp_send_json_error('Unauthorized');
+        }
+
+        $entry_id = isset($_POST['entry_id']) ? intval($_POST['entry_id']) : 0;
+
+        if (!$entry_id) {
+            wp_send_json_error('Invalid entry ID');
+        }
+
+        $lead = FLD_Leads::get_lead($entry_id);
+
+        if (!$lead) {
+            wp_send_json_error('Lead not found');
+        }
+
+        wp_send_json_success($lead);
     }
 
     /**
