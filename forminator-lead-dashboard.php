@@ -246,6 +246,8 @@ class Forminator_Lead_Dashboard {
             FLD_VERSION
         );
 
+        
+
         // Chart.js
         wp_enqueue_script(
             'chartjs',
