@@ -1,0 +1,177 @@
+/* Forminator Lead Dashboard — OTP Widget */
+
+.fld-otp-widget {
+    margin: 16px 0 20px;
+    padding: 16px 20px;
+    background: #f0f4f8;
+    border: 1px solid #d0dbe8;
+    border-radius: 6px;
+    font-family: inherit;
+}
+
+.fld-otp-widget__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3a5f;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fld-otp-widget__title::before {
+    content: "🔒";
+    font-size: 15px;
+}
+
+/* Send-code row */
+.fld-otp-send-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.fld-otp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+
+.fld-otp-btn--send {
+    background: #2271b1;
+    color: #fff;
+}
+.fld-otp-btn--send:hover:not(:disabled) {
+    background: #135e96;
+}
+.fld-otp-btn--send:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.fld-otp-btn--verify {
+    background: #00a32a;
+    color: #fff;
+}
+.fld-otp-btn--verify:hover:not(:disabled) {
+    background: #007a1f;
+}
+.fld-otp-btn--verify:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Code entry row */
+.fld-otp-code-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.fld-otp-code-input {
+    width: 140px;
+    padding: 8px 12px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-align: center;
+    border: 2px solid #b0c4d8;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.fld-otp-code-input:focus {
+    border-color: #2271b1;
+}
+
+/* Status messages */
+.fld-otp-status {
+    font-size: 13px;
+    margin-top: 10px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: none;
+}
+.fld-otp-status.is-info {
+    display: block;
+    background: #e8f0fe;
+    color: #1a56a0;
+}
+.fld-otp-status.is-error {
+    display: block;
+    background: #fde8e8;
+    color: #b91c1c;
+}
+.fld-otp-status.is-success {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* Verified badge */
+.fld-otp-verified {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #166534;
+    margin-top: 10px;
+}
+.fld-otp-verified.is-visible {
+    display: flex;
+}
+.fld-otp-verified__icon {
+    width: 22px;
+    height: 22px;
+    background: #22c55e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* Resend link */
+.fld-otp-resend {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    color: #2271b1;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 8px;
+    display: none;
+}
+.fld-otp-resend.is-visible {
+    display: inline;
+}
+
+/* Spinner */
+@keyframes fld-spin {
+    to { transform: rotate(360deg); }
+}
+.fld-otp-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: fld-spin 0.7s linear infinite;
+    vertical-align: middle;
+}

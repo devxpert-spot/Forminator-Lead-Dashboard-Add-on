@@ -3,7 +3,7 @@
  * Plugin Name: Forminator Lead Dashboard by DevXpert
  * Plugin URI: https://www.linkedin.com/in/anupkankale/
  * Description: A powerful Lead Management Dashboard addon for Forminator. Track SEO leads, manage feedback, and categorize leads as positive/negative.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Anup Kankale
  * Author URI: https://www.linkedin.com/in/anupkankale/
  * License: GPL v2 or later
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('FLD_VERSION', '1.0.0');
+define('FLD_VERSION', '1.0.1');
 define('FLD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('FLD_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('FLD_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -100,6 +100,9 @@ class Forminator_Lead_Dashboard {
         // Load includes
         $this->includes();
 
+        // Seed SMTP defaults on first load (add_option is a no-op if already set)
+        FLD_OTP::init_defaults();
+
         // Admin hooks
         if (is_admin()) {
             add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -120,6 +123,18 @@ class Forminator_Lead_Dashboard {
 
         // Clean up WP admin bar for Sales Admins
         add_action('admin_bar_menu', array($this, 'restrict_sales_admin_toolbar'), 999);
+
+        // Public OTP endpoints (front-end forms — accessible to guests)
+        add_action('wp_ajax_nopriv_fld_send_otp',   array($this, 'ajax_send_otp'));
+        add_action('wp_ajax_fld_send_otp',           array($this, 'ajax_send_otp'));
+        add_action('wp_ajax_nopriv_fld_verify_otp', array($this, 'ajax_verify_otp'));
+        add_action('wp_ajax_fld_verify_otp',         array($this, 'ajax_verify_otp'));
+
+        // Forminator server-side gate (runs before entry is saved)
+        add_filter('forminator_custom_form_submit_errors', array($this, 'check_otp_on_submit'), 10, 3);
+
+        // Public asset enqueue for OTP widget
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_public_assets'));
 
         // AJAX handlers
         add_action('wp_ajax_fld_get_leads', array($this, 'ajax_get_leads'));
@@ -153,6 +168,7 @@ class Forminator_Lead_Dashboard {
         require_once FLD_PLUGIN_DIR . 'includes/class-fld-database.php';
         require_once FLD_PLUGIN_DIR . 'includes/class-fld-leads.php';
         require_once FLD_PLUGIN_DIR . 'includes/class-fld-feedback.php';
+        require_once FLD_PLUGIN_DIR . 'includes/class-fld-otp.php';
     }
 
     /**
@@ -692,6 +708,119 @@ class Forminator_Lead_Dashboard {
         } else {
             wp_send_json_error(__('User is not a Sales Admin.', 'forminator-lead-dashboard'));
         }
+    }
+    /**
+     * Enqueue public-facing assets for OTP widget (only when OTP is configured)
+     */
+    public function enqueue_public_assets() {
+        $enabled_forms = get_option('fld_otp_enabled_forms', array());
+        if (empty($enabled_forms)) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'fld-otp-styles',
+            FLD_PLUGIN_URL . 'assets/css/fld-otp.css',
+            array(),
+            FLD_VERSION
+        );
+
+        wp_enqueue_script(
+            'fld-otp-script',
+            FLD_PLUGIN_URL . 'assets/js/fld-otp.js',
+            array('jquery'),
+            FLD_VERSION,
+            true
+        );
+
+        wp_localize_script('fld-otp-script', 'fld_otp_config', array(
+            'ajax_url'      => admin_url('admin-ajax.php'),
+            'nonce'         => wp_create_nonce('fld_otp_nonce'),
+            'enabled_forms' => array_map('intval', (array) $enabled_forms),
+            'strings'       => array(
+                'send_otp'     => __('Send Verification Code', 'forminator-lead-dashboard'),
+                'verify'       => __('Verify', 'forminator-lead-dashboard'),
+                'verified'     => __('Email Verified ✓', 'forminator-lead-dashboard'),
+                'otp_sent'     => __('Code sent to your email. Check your inbox.', 'forminator-lead-dashboard'),
+                'invalid_otp'  => __('Invalid or expired code. Please try again.', 'forminator-lead-dashboard'),
+                'enter_email'  => __('Please enter your email address first.', 'forminator-lead-dashboard'),
+                'otp_required' => __('Please verify your email before submitting.', 'forminator-lead-dashboard'),
+                'resend'       => __('Resend Code', 'forminator-lead-dashboard'),
+            ),
+        ));
+    }
+
+    /**
+     * AJAX: Send OTP to the submitted email address
+     */
+    public function ajax_send_otp() {
+        check_ajax_referer('fld_otp_nonce', 'nonce');
+
+        $email   = isset($_POST['email'])   ? sanitize_email(wp_unslash($_POST['email']))     : '';
+        $form_id = isset($_POST['form_id']) ? intval($_POST['form_id'])                        : 0;
+
+        if (!is_email($email) || !FLD_OTP::is_form_enabled($form_id)) {
+            wp_send_json_error(__('Invalid request.', 'forminator-lead-dashboard'));
+        }
+
+        $result = FLD_OTP::send_otp($email, $form_id);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+        }
+
+        wp_send_json_success();
+    }
+
+    /**
+     * AJAX: Verify the OTP code and return a one-time token
+     */
+    public function ajax_verify_otp() {
+        check_ajax_referer('fld_otp_nonce', 'nonce');
+
+        $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email']))    : '';
+        $code  = isset($_POST['code'])  ? sanitize_text_field(wp_unslash($_POST['code'])) : '';
+
+        $token = FLD_OTP::verify_otp($email, $code);
+
+        if ($token) {
+            wp_send_json_success(array('token' => $token));
+        } else {
+            wp_send_json_error(__('Invalid or expired code.', 'forminator-lead-dashboard'));
+        }
+    }
+
+    /**
+     * Forminator hook: block form submission if OTP is enabled but token is missing/invalid.
+     *
+     * Forminator AJAX only serializes its own registered fields, so the hidden
+     * fld_otp_token input injected by JS is often absent from $_POST.
+     * We check the cookie first (always present in XHR) then fall back to $_POST.
+     */
+    public function check_otp_on_submit($errors, $form_id, $field_data_array) {
+        if (!FLD_OTP::is_form_enabled($form_id)) {
+            return $errors;
+        }
+
+        // Cookie takes priority — reliably present in Forminator's AJAX request
+        $token = '';
+        if (!empty($_COOKIE['fld_otp_token'])) {
+            $token = sanitize_text_field(wp_unslash($_COOKIE['fld_otp_token']));
+        } elseif (!empty($_POST['fld_otp_token'])) {
+            $token = sanitize_text_field(wp_unslash($_POST['fld_otp_token']));
+        }
+
+        if (!$token || !FLD_OTP::verify_token($token)) {
+            $errors[] = __('Please verify your email address before submitting.', 'forminator-lead-dashboard');
+            return $errors;
+        }
+
+        FLD_OTP::consume_token($token);
+
+        // Clear the cookie server-side so it cannot be reused
+        setcookie('fld_otp_token', '', time() - 3600, '/', '', is_ssl(), false);
+
+        return $errors;
     }
 }
 

@@ -19,6 +19,19 @@ if (isset($_POST['fld_save_settings']) && wp_verify_nonce($_POST['fld_settings_n
     update_option('fld_default_assignee', intval($_POST['fld_default_assignee']));
     update_option('fld_leads_per_page', intval($_POST['fld_leads_per_page']));
 
+    // Brevo SMTP / OTP settings
+    update_option('fld_smtp_host',          sanitize_text_field(wp_unslash($_POST['fld_smtp_host'] ?? '')));
+    update_option('fld_smtp_port',          intval($_POST['fld_smtp_port'] ?? 587));
+    update_option('fld_smtp_username',      sanitize_text_field(wp_unslash($_POST['fld_smtp_username'] ?? '')));
+    // Only update password if a new value was actually submitted (non-empty)
+    if (!empty($_POST['fld_smtp_password'])) {
+        update_option('fld_smtp_password',  sanitize_text_field(wp_unslash($_POST['fld_smtp_password'])));
+    }
+    update_option('fld_smtp_encryption',    sanitize_text_field(wp_unslash($_POST['fld_smtp_encryption'] ?? 'tls')));
+    update_option('fld_brevo_sender_name',  sanitize_text_field(wp_unslash($_POST['fld_brevo_sender_name'] ?? get_bloginfo('name'))));
+    update_option('fld_brevo_sender_email', sanitize_email(wp_unslash($_POST['fld_brevo_sender_email'] ?? '')));
+    update_option('fld_otp_enabled_forms',  array_map('intval', (array) ($_POST['fld_otp_enabled_forms'] ?? [])));
+
     echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'forminator-lead-dashboard') . '</p></div>';
 }
 
@@ -27,6 +40,16 @@ $notification_email  = get_option('fld_notification_email', get_option('admin_em
 $auto_assign         = get_option('fld_auto_assign', 0);
 $default_assignee    = get_option('fld_default_assignee', 0);
 $leads_per_page      = get_option('fld_leads_per_page', 20);
+
+// Brevo SMTP / OTP settings
+$smtp_host          = get_option('fld_smtp_host',          'smtp-relay.brevo.com');
+$smtp_port          = get_option('fld_smtp_port',          587);
+$smtp_username      = get_option('fld_smtp_username',      '');
+$smtp_encryption    = get_option('fld_smtp_encryption',    'tls');
+$brevo_sender_name  = get_option('fld_brevo_sender_name',  get_bloginfo('name'));
+$brevo_sender_email = get_option('fld_brevo_sender_email', get_option('admin_email'));
+$otp_enabled_forms  = array_map('intval', (array) get_option('fld_otp_enabled_forms', array()));
+$all_forms          = FLD_Leads::get_forms();
 
 $team_users    = FLD_Roles::get_team_users();
 $sales_admins  = FLD_Roles::get_sales_admins();
@@ -156,6 +179,118 @@ $sales_admins  = FLD_Roles::get_sales_admins();
                     <span class="fld-status-desc"><?php _e('Lead closed/archived', 'forminator-lead-dashboard'); ?></span>
                 </div>
             </div>
+        </div>
+
+        <!-- Spam Prevention — Brevo SMTP OTP -->
+        <div class="fld-settings-section">
+            <h2><?php _e('Spam Prevention — Email OTP', 'forminator-lead-dashboard'); ?></h2>
+            <p class="description">
+                <?php _e('Require visitors to verify their email via a one-time code sent through Brevo SMTP before a form submission becomes a lead.', 'forminator-lead-dashboard'); ?>
+            </p>
+
+            <h3 style="margin-top:16px;"><?php _e('Brevo SMTP Settings', 'forminator-lead-dashboard'); ?></h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="fld_smtp_host"><?php _e('SMTP Host', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" id="fld_smtp_host" name="fld_smtp_host"
+                               value="<?php echo esc_attr($smtp_host); ?>" class="regular-text">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="fld_smtp_port"><?php _e('SMTP Port', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="number" id="fld_smtp_port" name="fld_smtp_port"
+                               value="<?php echo esc_attr($smtp_port); ?>" min="1" max="65535" style="width:100px;">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="fld_smtp_encryption"><?php _e('Encryption', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <select id="fld_smtp_encryption" name="fld_smtp_encryption">
+                            <option value="tls"  <?php selected($smtp_encryption, 'tls');  ?>>TLS (STARTTLS — Port 587)</option>
+                            <option value="ssl"  <?php selected($smtp_encryption, 'ssl');  ?>>SSL — Port 465</option>
+                            <option value=""     <?php selected($smtp_encryption, '');     ?>>None</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="fld_smtp_username"><?php _e('SMTP Username', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" id="fld_smtp_username" name="fld_smtp_username"
+                               value="<?php echo esc_attr($smtp_username); ?>" class="regular-text"
+                               autocomplete="off">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="fld_smtp_password"><?php _e('SMTP Password', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="password" id="fld_smtp_password" name="fld_smtp_password"
+                               value="" placeholder="<?php esc_attr_e('Leave blank to keep current password', 'forminator-lead-dashboard'); ?>"
+                               class="regular-text" autocomplete="new-password">
+                        <p class="description"><?php _e('Leave blank to keep the saved password. Enter a new value only if you want to change it.', 'forminator-lead-dashboard'); ?></p>
+                    </td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top:20px;"><?php _e('Sender Identity', 'forminator-lead-dashboard'); ?></h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="fld_brevo_sender_name"><?php _e('From Name', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" id="fld_brevo_sender_name" name="fld_brevo_sender_name"
+                               value="<?php echo esc_attr($brevo_sender_name); ?>" class="regular-text">
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="fld_brevo_sender_email"><?php _e('From Email', 'forminator-lead-dashboard'); ?></label>
+                    </th>
+                    <td>
+                        <input type="email" id="fld_brevo_sender_email" name="fld_brevo_sender_email"
+                               value="<?php echo esc_attr($brevo_sender_email); ?>" class="regular-text">
+                        <p class="description"><?php _e('Must match a verified sender in your Brevo account.', 'forminator-lead-dashboard'); ?></p>
+                    </td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top:20px;"><?php _e('Enable OTP for Forms', 'forminator-lead-dashboard'); ?></h3>
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><?php _e('Protected Forms', 'forminator-lead-dashboard'); ?></th>
+                    <td>
+                        <?php if (empty($all_forms)): ?>
+                            <p class="description"><?php _e('No Forminator forms found.', 'forminator-lead-dashboard'); ?></p>
+                        <?php else: ?>
+                            <?php foreach ($all_forms as $form): ?>
+                                <label style="display:block;margin-bottom:6px;">
+                                    <input type="checkbox"
+                                           name="fld_otp_enabled_forms[]"
+                                           value="<?php echo esc_attr($form['id']); ?>"
+                                           <?php checked(in_array(intval($form['id']), $otp_enabled_forms, true)); ?>>
+                                    <?php echo esc_html($form['name']); ?>
+                                    <span style="color:#999;font-size:12px;">(ID: <?php echo esc_html($form['id']); ?>)</span>
+                                </label>
+                            <?php endforeach; ?>
+                            <p class="description" style="margin-top:8px;">
+                                <?php _e('Checked forms require email verification before submission is accepted as a lead.', 'forminator-lead-dashboard'); ?>
+                            </p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <p class="submit">
