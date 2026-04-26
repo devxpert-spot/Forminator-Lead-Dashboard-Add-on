@@ -36,7 +36,7 @@ Already saved to `wp_options` via `FLD_OTP::init_defaults()` (uses `add_option` 
 | `fld_smtp_host` | smtp-relay.brevo.com |
 | `fld_smtp_port` | 587 |
 | `fld_smtp_username` | a8a8c5001@smtp-brevo.com |
-| `fld_smtp_password` | *(saved in DB — do not re-enter unless rotating)* |
+| `fld_smtp_password` | *(enter manually via Settings page — never commit this value)* |
 | `fld_smtp_encryption` | tls |
 | `fld_brevo_sender_name` | Trendzy Tours |
 | `fld_brevo_sender_email` | tradestrome@gmail.com |
