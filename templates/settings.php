@@ -32,7 +32,7 @@ if (isset($_POST['fld_save_settings']) && wp_verify_nonce($_POST['fld_settings_n
     update_option('fld_brevo_sender_email', sanitize_email(wp_unslash($_POST['fld_brevo_sender_email'] ?? '')));
     update_option('fld_otp_enabled_forms',  array_map('intval', (array) ($_POST['fld_otp_enabled_forms'] ?? [])));
 
-    echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'forminator-lead-dashboard') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved successfully!', 'forminator-lead-dashboard' ) . '</p></div>';
 }
 
 $email_notifications = get_option('fld_email_notifications', 0);
@@ -305,7 +305,14 @@ $sales_admins  = FLD_Roles::get_sales_admins();
     <div class="fld-settings-section fld-user-management">
         <h2><?php _e('Sales Admin Users', 'forminator-lead-dashboard'); ?></h2>
         <p class="description">
-            <?php _e('Users with the <strong>Sales Admin</strong> role can log in and access the Lead Dashboard. They can view all leads and add feedback. Only Administrators can access Settings.', 'forminator-lead-dashboard'); ?>
+            <?php
+            printf(
+                /* translators: 1: opening <strong> tag, 2: closing </strong> tag */
+                esc_html__( 'Users with the %1$sSales Admin%2$s role can log in and access the Lead Dashboard. They can view all leads and add feedback. Only Administrators can access Settings.', 'forminator-lead-dashboard' ),
+                '<strong>',
+                '</strong>'
+            );
+            ?>
         </p>
 
         <!-- Current Sales Admins -->
@@ -384,7 +391,7 @@ $sales_admins  = FLD_Roles::get_sales_admins();
         $('#fld-assign-sales-admin').on('click', function() {
             var userId = $('#fld-assign-user-select').val();
             if (!userId) {
-                setStatus('warning', '<?php esc_js(_e('Please select a user.', 'forminator-lead-dashboard')); ?>');
+                setStatus('warning', '<?php echo esc_js( __( 'Please select a user.', 'forminator-lead-dashboard' ) ); ?>');
                 return;
             }
             assignSalesAdmin(userId);

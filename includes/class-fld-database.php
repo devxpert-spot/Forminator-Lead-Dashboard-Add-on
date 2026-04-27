@@ -97,14 +97,15 @@ class FLD_Database {
         $tables = array(
             $wpdb->prefix . 'fld_lead_status',
             $wpdb->prefix . 'fld_feedback',
-            $wpdb->prefix . 'fld_activity_log'
+            $wpdb->prefix . 'fld_activity_log',
         );
 
-        foreach ($tables as $table) {
-            $wpdb->query("DROP TABLE IF EXISTS $table");
+        foreach ( $tables as $table ) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name is constructed from trusted $wpdb->prefix and a hardcoded suffix.
+            $wpdb->query( 'DROP TABLE IF EXISTS `' . esc_sql( $table ) . '`' );
         }
 
-        delete_option('fld_db_version');
-        delete_option('fld_version');
+        delete_option( 'fld_db_version' );
+        delete_option( 'fld_version' );
     }
 }

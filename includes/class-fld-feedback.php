@@ -176,7 +176,7 @@ class FLD_Feedback {
         global $wpdb;
         
         $table = $wpdb->prefix . 'fld_feedback';
-        $date_from = date('Y-m-d', strtotime("-{$days} days"));
+        $date_from = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 
         $stats = $wpdb->get_results($wpdb->prepare(
             "SELECT rating, COUNT(*) as count
