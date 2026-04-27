@@ -84,7 +84,7 @@ class Forminator_Lead_Dashboard {
     public function forminator_missing_notice() {
         ?>
         <div class="notice notice-error">
-            <p><?php _e('Forminator Lead Dashboard requires Forminator plugin to be installed and activated.', 'forminator-lead-dashboard'); ?></p>
+            <p><?php esc_html_e( 'Forminator Lead Dashboard requires Forminator plugin to be installed and activated.', 'forminator-lead-dashboard' ); ?></p>
         </div>
         <?php
     }
@@ -93,6 +93,13 @@ class Forminator_Lead_Dashboard {
      * Initialize plugin
      */
     public function init() {
+        // Load translations before anything else uses __() or _e().
+        load_plugin_textdomain(
+            'forminator-lead-dashboard',
+            false,
+            dirname( FLD_PLUGIN_BASENAME ) . '/languages'
+        );
+
         if (!$this->check_forminator()) {
             return;
         }
@@ -264,10 +271,10 @@ class Forminator_Lead_Dashboard {
 
         
 
-        // Chart.js
+        // Chart.js — bundled locally (WP.org does not permit external CDN scripts).
         wp_enqueue_script(
             'chartjs',
-            'https://cdn.jsdelivr.net/npm/chart.js',
+            FLD_PLUGIN_URL . 'assets/js/chart.min.js',
             array(),
             '4.4.0',
             true

@@ -18,13 +18,13 @@ class FLD_OTP {
      * Uses add_option() so existing saved values are never overwritten.
      */
     public static function init_defaults() {
-        add_option('fld_smtp_host',          'smtp-relay.brevo.com');
-        add_option('fld_smtp_port',          '587');
-        add_option('fld_smtp_username',      'a8a8c5001@smtp-brevo.com');
-        add_option('fld_smtp_password',      ''); // Enter via Lead Dashboard → Settings
-        add_option('fld_smtp_encryption',    'tls');
-        add_option('fld_brevo_sender_name',  'Trendzy Tours');
-        add_option('fld_brevo_sender_email', 'tradestrome@gmail.com');
+        add_option( 'fld_smtp_host',          'smtp-relay.brevo.com' );
+        add_option( 'fld_smtp_port',          '587' );
+        add_option( 'fld_smtp_username',      '' );
+        add_option( 'fld_smtp_password',      '' );
+        add_option( 'fld_smtp_encryption',    'tls' );
+        add_option( 'fld_brevo_sender_name',  get_bloginfo( 'name' ) );
+        add_option( 'fld_brevo_sender_email', get_option( 'admin_email' ) );
     }
 
     /**

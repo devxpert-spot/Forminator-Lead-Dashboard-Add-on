@@ -277,7 +277,7 @@ class FLD_Leads {
         $table_entries = $wpdb->prefix . 'frmt_form_entry';
         $table_status = $wpdb->prefix . 'fld_lead_status';
 
-        $date_from = date('Y-m-d', strtotime("-{$days} days"));
+        $date_from = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
 
         // Total leads
         $total_leads = $wpdb->get_var($wpdb->prepare(
